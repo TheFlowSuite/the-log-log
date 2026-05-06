@@ -780,7 +780,7 @@ function renderStreak(data) {
   const todayKey = getDateKey(now.getTime());
   const yesterdayKey = getDateKey(now.getTime() - 86400000);
 
-  const loggedDays = new Set(data.map(d => getDateKey(d.ts)));
+  const loggedDays = new Set(data.filter(d => !d.bulk).map(d => getDateKey(d.ts)));
 
   let current = 0;
   let best = 0;
