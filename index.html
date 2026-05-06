@@ -422,7 +422,35 @@
   }
   .btn-cancel:hover { background: var(--surface3); }
 
-  @media (max-width: 480px) {
+  .streak-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px 20px;
+    margin-bottom: 24px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+  .streak-flame {
+    font-size: 2.2rem;
+    line-height: 1;
+    animation: wobble 3s ease-in-out infinite;
+  }
+  .streak-flame.cold { filter: grayscale(1); animation: none; }
+  .streak-info { flex: 1; }
+  .streak-value {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: var(--text);
+    line-height: 1;
+  }
+  .streak-unit { font-size: 1rem; font-weight: 600; color: var(--text-muted); }
+  .streak-sub { font-size: 0.78rem; color: var(--text-muted); margin-top: 4px; }
+  .streak-best { text-align: center; }
+  .streak-best-label { font-size: 0.7rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-faint); }
+  .streak-best-value { font-family: 'Barlow Condensed', sans-serif; font-size: 1.4rem; font-weight: 700; color: #A78BFA; }
     .stats-grid { grid-template-columns: 1fr 1fr; }
     header h1 { font-size: 1.7rem; }
   }
@@ -526,6 +554,18 @@
       <div class="stat-label">All Time</div>
       <div class="stat-value" id="statAllTime">0</div>
       <div class="stat-sub">poops</div>
+    </div>
+  </div>
+
+  <div class="streak-card" id="streakCard">
+    <div class="streak-flame" id="streakFlame">🔥</div>
+    <div class="streak-info">
+      <div class="streak-value"><span id="streakCount">0</span> <span class="streak-unit">day streak</span></div>
+      <div class="streak-sub" id="streakSub">Log today to start a streak!</div>
+    </div>
+    <div class="streak-best">
+      <div class="streak-best-label">Best</div>
+      <div class="streak-best-value" id="streakBest">0</div>
     </div>
   </div>
 
@@ -728,6 +768,63 @@ function getCountsForYear(data, year) {
 
 function daysInMonth(year, month) {
   return new Date(year, month + 1, 0).getDate();
+}
+
+function getDateKey(ts) {
+  const d = new Date(ts);
+  return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+}
+
+function renderStreak(data) {
+  const now = new Date();
+  const todayKey = getDateKey(now.getTime());
+  const yesterdayKey = getDateKey(now.getTime() - 86400000);
+
+  const loggedDays = new Set(data.map(d => getDateKey(d.ts)));
+
+  let current = 0;
+  let best = 0;
+  let temp = 0;
+
+  // Calculate best streak
+  const allDays = [...loggedDays].sort();
+  allDays.forEach((key, i) => {
+    if (i === 0) { temp = 1; }
+    else {
+      const prev = new Date(allDays[i-1]);
+      const curr = new Date(key);
+      const diff = (curr - prev) / 86400000;
+      temp = diff === 1 ? temp + 1 : 1;
+    }
+    if (temp > best) best = temp;
+  });
+
+  // Calculate current streak (must include today or yesterday)
+  if (loggedDays.has(todayKey) || loggedDays.has(yesterdayKey)) {
+    let checkKey = loggedDays.has(todayKey) ? todayKey : yesterdayKey;
+    let checkDate = loggedDays.has(todayKey) ? new Date(now) : new Date(now.getTime() - 86400000);
+    while (loggedDays.has(getDateKey(checkDate.getTime()))) {
+      current++;
+      checkDate = new Date(checkDate.getTime() - 86400000);
+    }
+  }
+
+  const flame = document.getElementById('streakFlame');
+  const hasToday = loggedDays.has(todayKey);
+
+  document.getElementById('streakCount').textContent = current;
+  document.getElementById('streakBest').textContent = best;
+  flame.classList.toggle('cold', current === 0);
+
+  let sub = '';
+  if (current === 0) sub = 'Log today to start your streak!';
+  else if (!hasToday) sub = 'Log today to keep your streak alive! ⚠️';
+  else if (current === 1) sub = 'Streak started — come back tomorrow!';
+  else if (current < 7) sub = `${current} days strong — keep it up!`;
+  else if (current < 30) sub = `${current} days — you're on fire! 🔥`;
+  else sub = `${current} days — absolute legend! 🏆`;
+
+  document.getElementById('streakSub').textContent = sub;
 }
 
 function getAvgPerDay(count, year, monthIndex) {
@@ -1062,6 +1159,7 @@ function renderStats(data) {
 function render() {
   const data = getData();
   renderStats(data);
+  renderStreak(data);
   renderMonthChart();
   renderYearBars(data);
   renderTable(data);
