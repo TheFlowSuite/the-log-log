@@ -579,8 +579,9 @@
       <div class="big">🧻</div>
       No logs yet. Time to make your mark!
     </div>
-    <div id="showMoreContainer" style="display:none; text-align:center; padding-top:16px; border-top:1px solid var(--border); margin-top:4px;">
-      <button id="showMoreBtn" onclick="showMore()" style="background:none; border:1px solid var(--border-hover); border-radius:100px; padding:8px 24px; font-family:'DM Sans',sans-serif; font-size:0.85rem; font-weight:600; color:var(--text-muted); cursor:pointer; transition:background 0.15s, color 0.15s;" onmouseover="this.style.background='var(--surface2)';this.style.color='var(--text)'" onmouseout="this.style.background='none';this.style.color='var(--text-muted)'">Show more</button>
+    <div id="showMoreContainer" style="display:none; text-align:center; padding-top:16px; border-top:1px solid var(--border); margin-top:4px; gap:10px; justify-content:center; align-items:center;">
+      <button id="showMoreBtn" onclick="showMore()" style="background:none; border:1px solid var(--border-hover); border-radius:100px; padding:8px 24px; font-family:'DM Sans',sans-serif; font-size:0.85rem; font-weight:600; color:var(--text-muted); cursor:pointer;" onmouseover="this.style.background='var(--surface2)';this.style.color='var(--text)'" onmouseout="this.style.background='none';this.style.color='var(--text-muted)'">Show more</button>
+      <button id="collapseBtn" onclick="collapseLogs()" style="display:none; background:none; border:1px solid var(--border-hover); border-radius:100px; padding:8px 24px; font-family:'DM Sans',sans-serif; font-size:0.85rem; font-weight:600; color:var(--text-muted); cursor:pointer;" onmouseover="this.style.background='var(--surface2)';this.style.color='var(--text)'" onmouseout="this.style.background='none';this.style.color='var(--text-muted)'">↑ Collapse</button>
     </div>
   </div>
 
@@ -956,13 +957,26 @@ function renderTable(data) {
       </td>
     </tr>`;
   }).join('');
-  if (combined.length > visibleRows) {
-    showMoreContainer.style.display = '';
-    document.getElementById('showMoreBtn').textContent = `Show ${Math.min(10, combined.length - visibleRows)} more`;
+  const showMoreBtn = document.getElementById('showMoreBtn');
+  const collapseBtn = document.getElementById('collapseBtn');
+  const hasMore = combined.length > visibleRows;
+  const isExpanded = visibleRows > 8;
+
+  if (hasMore || isExpanded) {
+    showMoreContainer.style.display = 'flex';
+    showMoreBtn.style.display = hasMore ? '' : 'none';
+    if (hasMore) showMoreBtn.textContent = `Show ${Math.min(10, combined.length - visibleRows)} more`;
+    collapseBtn.style.display = isExpanded ? '' : 'none';
   } else {
     showMoreContainer.style.display = 'none';
   }
   if (!selectMode) setupSwipeToDelete();
+}
+
+function collapseLogs() {
+  visibleRows = 8;
+  renderTable(getData());
+  document.getElementById('logTableBody').scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
 function showMore() {
