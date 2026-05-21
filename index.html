@@ -588,6 +588,27 @@
   </div>
 
   <div class="section-card">
+    <h2>🕐 Time of Day Heatmap</h2>
+    <p style="font-size:0.8rem;color:var(--text-muted);margin:-12px 0 16px;">Single entries only — excludes bulk logs</p>
+    <div style="display:grid;grid-template-columns:52px repeat(7,1fr);gap:4px;align-items:center;margin-bottom:4px;">
+      <div></div>
+      <div style="font-size:0.65rem;font-weight:600;color:var(--text-faint);text-align:center;">Sun</div>
+      <div style="font-size:0.65rem;font-weight:600;color:var(--text-faint);text-align:center;">Mon</div>
+      <div style="font-size:0.65rem;font-weight:600;color:var(--text-faint);text-align:center;">Tue</div>
+      <div style="font-size:0.65rem;font-weight:600;color:var(--text-faint);text-align:center;">Wed</div>
+      <div style="font-size:0.65rem;font-weight:600;color:var(--text-faint);text-align:center;">Thu</div>
+      <div style="font-size:0.65rem;font-weight:600;color:var(--text-faint);text-align:center;">Fri</div>
+      <div style="font-size:0.65rem;font-weight:600;color:var(--text-faint);text-align:center;">Sat</div>
+    </div>
+    <div id="heatmapGrid" style="display:grid;grid-template-columns:52px repeat(7,1fr);gap:4px;align-items:center;"></div>
+    <div style="display:flex;align-items:center;gap:8px;margin-top:14px;">
+      <span style="font-size:0.7rem;color:var(--text-faint);">None</span>
+      <div id="heatLegend" style="display:flex;gap:3px;"></div>
+      <span style="font-size:0.7rem;color:var(--text-faint);">Most</span>
+    </div>
+  </div>
+
+  <div class="section-card">
     <h2>📊 Yearly Overview</h2>
     <div id="yearBars"></div>
   </div>
@@ -825,6 +846,62 @@ function renderStreak(data) {
   else sub = `${current} days — absolute legend! 🏆`;
 
   document.getElementById('streakSub').textContent = sub;
+}
+
+function renderHeatmap(data) {
+  const TIME_SLOTS = [
+    { label:'12–4am',  hours:[0,1,2,3] },
+    { label:'4–8am',   hours:[4,5,6,7] },
+    { label:'8–12pm',  hours:[8,9,10,11] },
+    { label:'12–4pm',  hours:[12,13,14,15] },
+    { label:'4–8pm',   hours:[16,17,18,19] },
+    { label:'8–12am',  hours:[20,21,22,23] },
+  ];
+  const STOPS = ['#1E1E2A','#3B2D6E','#5B3FA8','#7C3AED','#A78BFA','#C4B5FD'];
+  const filtered = data.filter(d => !d.bulk);
+  const counts = {};
+  TIME_SLOTS.forEach((_, ti) => [0,1,2,3,4,5,6].forEach(di => counts[`${ti}-${di}`] = 0));
+  filtered.forEach(d => {
+    const date = new Date(d.ts);
+    const di = date.getDay();
+    const h = date.getHours();
+    const ti = TIME_SLOTS.findIndex(s => s.hours.includes(h));
+    if (ti >= 0) counts[`${ti}-${di}`]++;
+  });
+  const max = Math.max(...Object.values(counts), 1);
+  function getColor(val) {
+    if (val === 0) return STOPS[0];
+    const idx = Math.ceil((val / max) * (STOPS.length - 2)) + 1;
+    return STOPS[Math.min(idx, STOPS.length - 1)];
+  }
+  const grid = document.getElementById('heatmapGrid');
+  grid.innerHTML = '';
+  TIME_SLOTS.forEach((slot, ti) => {
+    const label = document.createElement('div');
+    label.style.cssText = 'font-size:0.62rem;color:var(--text-muted);text-align:right;padding-right:6px;line-height:1.2;';
+    label.textContent = slot.label;
+    grid.appendChild(label);
+    [0,1,2,3,4,5,6].forEach(di => {
+      const val = counts[`${ti}-${di}`];
+      const cell = document.createElement('div');
+      cell.style.cssText = `height:34px;border-radius:6px;background:${getColor(val)};display:flex;align-items:center;justify-content:center;`;
+      cell.title = `${slot.label} · ${DAYS[di]}: ${val} poop${val !== 1 ? 's' : ''}`;
+      if (val > 0) {
+        const num = document.createElement('span');
+        num.style.cssText = 'font-family:"Barlow Condensed",sans-serif;font-size:0.85rem;font-weight:700;color:#EEEAF8;';
+        num.textContent = val;
+        cell.appendChild(num);
+      }
+      grid.appendChild(cell);
+    });
+  });
+  const legend = document.getElementById('heatLegend');
+  legend.innerHTML = '';
+  STOPS.forEach(color => {
+    const sq = document.createElement('div');
+    sq.style.cssText = `width:18px;height:10px;border-radius:3px;background:${color};`;
+    legend.appendChild(sq);
+  });
 }
 
 function getAvgPerDay(count, year, monthIndex) {
@@ -1160,6 +1237,7 @@ function render() {
   const data = getData();
   renderStats(data);
   renderStreak(data);
+  renderHeatmap(data);
   renderMonthChart();
   renderYearBars(data);
   renderTable(data);
