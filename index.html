@@ -589,7 +589,7 @@
 
   <div class="section-card">
     <h2>🕐 Time of Day Heatmap</h2>
-    <p style="font-size:0.8rem;color:var(--text-muted);margin:-12px 0 16px;">Single entries only — excludes bulk logs</p>
+    <p id="heatmapSubtitle" style="font-size:0.8rem;color:var(--text-muted);margin:-12px 0 16px;">Single entries only — click a month bar to filter</p>
     <div style="display:grid;grid-template-columns:52px repeat(7,1fr);gap:4px;align-items:center;margin-bottom:4px;">
       <div></div>
       <div style="font-size:0.65rem;font-weight:600;color:var(--text-faint);text-align:center;">Sun</div>
@@ -684,6 +684,7 @@ const MESSAGES = [
 let chartYear = new Date().getFullYear();
 let monthChart = null;
 let chartMode = 'total';
+let selectedMonth = null;
 
 function getData() {
   return JSON.parse(localStorage.getItem('poop_logs') || '[]');
@@ -774,8 +775,10 @@ function spawnConfetti() {
 
 function changeYear(delta) {
   chartYear += delta;
+  selectedMonth = null;
   document.getElementById('chartYear').textContent = chartYear;
   renderMonthChart();
+  renderHeatmap(getData());
 }
 
 function getCountsForYear(data, year) {
@@ -848,6 +851,16 @@ function renderStreak(data) {
   document.getElementById('streakSub').textContent = sub;
 }
 
+function updateChartHighlight() {
+  if (!monthChart) return;
+  const counts = monthChart.data.datasets[0].data;
+  monthChart.data.datasets[0].backgroundColor = counts.map((_, i) => {
+    if (!selectedMonth) return '#7C3AED';
+    return (selectedMonth.month === i && selectedMonth.year === chartYear) ? '#A78BFA' : 'rgba(124,58,237,0.25)';
+  });
+  monthChart.update();
+}
+
 function renderHeatmap(data) {
   const TIME_SLOTS = [
     { label:'12–4am',  hours:[0,1,2,3] },
@@ -858,7 +871,19 @@ function renderHeatmap(data) {
     { label:'8–12am',  hours:[20,21,22,23] },
   ];
   const STOPS = ['#1E1E2A','#3B2D6E','#5B3FA8','#7C3AED','#A78BFA','#C4B5FD'];
-  const filtered = data.filter(d => !d.bulk);
+  let filtered = data.filter(d => !d.bulk);
+  if (selectedMonth) {
+    filtered = filtered.filter(d => {
+      const date = new Date(d.ts);
+      return date.getFullYear() === selectedMonth.year && date.getMonth() === selectedMonth.month;
+    });
+  }
+  const subtitle = document.getElementById('heatmapSubtitle');
+  if (subtitle) {
+    subtitle.textContent = selectedMonth
+      ? `${MONTH_FULL[selectedMonth.month]} ${selectedMonth.year} — click the bar again to reset`
+      : 'Single entries only — click a month bar to filter';
+  }
   const counts = {};
   TIME_SLOTS.forEach((_, ti) => [0,1,2,3,4,5,6].forEach(di => counts[`${ti}-${di}`] = 0));
   filtered.forEach(d => {
@@ -972,7 +997,19 @@ function renderMonthChart() {
         }
       },
       onHover: (e, els) => { e.native.target.style.cursor = els.length ? 'pointer' : 'default'; },
-      onClick: () => {},
+      onClick: (e, els) => {
+        if (!els.length) return;
+        const idx = els[0].index;
+        const counts = getCountsForYear(getData(), chartYear);
+        if (!counts[idx]) return;
+        if (selectedMonth && selectedMonth.month === idx && selectedMonth.year === chartYear) {
+          selectedMonth = null;
+        } else {
+          selectedMonth = { month: idx, year: chartYear };
+        }
+        renderHeatmap(getData());
+        updateChartHighlight();
+      },
       scales: {
         x: {
           grid: { display: false },
