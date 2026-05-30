@@ -802,8 +802,10 @@ async function sbFetch(method, path, body) {
     body: body ? JSON.stringify(body) : undefined
   });
   if (!res.ok) { const t = await res.text(); throw new Error(t); }
-  if (res.status === 204 || method === 'DELETE' || method === 'PATCH') return null;
-  return res.json();
+  if (res.status === 204 || res.status === 201 || method === 'DELETE' || method === 'PATCH') return null;
+  const text = await res.text();
+  if (!text || text.trim() === '') return null;
+  return JSON.parse(text);
 }
 
 async function hashPin(pin) {
