@@ -916,7 +916,7 @@ async function forgotLookup() {
     document.getElementById('forgotStep1').style.display = 'none';
     document.getElementById('forgotStep2').style.display = '';
     document.getElementById('forgotAnswer').dataset.username = username;
-  } catch(e) { showAuthError('forgotError', `Error: ${e.message}`); }
+  } catch(e) { showAuthError('forgotError', 'Something went wrong. Please try again.'); }
 }
 
 async function forgotReset() {
@@ -936,7 +936,7 @@ async function forgotReset() {
     showToast('PIN reset successfully! Please log in. 🔐');
     setAuthTab('login');
     document.getElementById('loginUsername').value = username;
-  } catch(e) { showAuthError('forgotError2', `Error: ${e.message}`); }
+  } catch(e) { showAuthError('forgotError2', 'Something went wrong. Please try again.'); }
 }
 
 function showAuthError(id, msg) {
@@ -954,7 +954,7 @@ async function login() {
     if (!rows.length) return showAuthError('loginError', 'Username not found.');
     if (rows[0].pin !== hashed) return showAuthError('loginError', 'Incorrect PIN.');
     await startSession(username);
-  } catch(e) { showAuthError('loginError', `Error: ${e.message}`); console.error('Login error:', e); }
+  } catch(e) { showAuthError('loginError', 'Something went wrong. Please try again.'); }
 }
 
 async function signup() {
@@ -988,7 +988,7 @@ async function signup() {
       render();
       showToast(`✅ ${local.length} logs migrated to your account!`);
     }
-  } catch(e) { showAuthError('signupError', `Error: ${e.message}`); console.error('Signup error:', e); }
+  } catch(e) { showAuthError('signupError', 'Something went wrong. Please try again.'); }
 }
 
 async function startSession(username) {
