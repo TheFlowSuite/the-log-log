@@ -716,6 +716,7 @@
     <div class="auth-toggle">
       <button id="authTabLogin" class="auth-tab active" onclick="setAuthTab('login')">Log In</button>
       <button id="authTabSignup" class="auth-tab" onclick="setAuthTab('signup')">Sign Up</button>
+      <button id="authTabForgot" class="auth-tab" onclick="setAuthTab('forgot')">Forgot PIN</button>
     </div>
 
     <div id="authLogin">
@@ -744,8 +745,52 @@
         <label>Confirm PIN</label>
         <input type="password" id="signupPinConfirm" placeholder="repeat PIN" maxlength="4" inputmode="numeric" autocomplete="new-password">
       </div>
+      <div class="auth-field">
+        <label>Security Question</label>
+        <select id="signupQuestion" style="width:100%;padding:10px 14px;border:1px solid var(--border-hover);border-radius:10px;font-family:'DM Sans',sans-serif;font-size:0.95rem;color:var(--text);background:var(--surface2);outline:none;color-scheme:dark;">
+          <option value="">Select a question...</option>
+          <option>What was the name of your first pet?</option>
+          <option>What city were you born in?</option>
+          <option>What is your mother's maiden name?</option>
+          <option>What was the name of your first school?</option>
+          <option>What is your favourite movie?</option>
+          <option>What street did you grow up on?</option>
+        </select>
+      </div>
+      <div class="auth-field">
+        <label>Security Answer</label>
+        <input type="text" id="signupAnswer" placeholder="your answer" autocomplete="off">
+      </div>
       <div id="signupError" style="color:#F87171;font-size:0.82rem;margin-bottom:12px;display:none;"></div>
       <button class="auth-btn" onclick="signup()">Create Account</button>
+    </div>
+
+    <div id="authForgot" style="display:none;">
+      <div id="forgotStep1">
+        <div class="auth-field">
+          <label>Username</label>
+          <input type="text" id="forgotUsername" placeholder="your username" autocomplete="username">
+        </div>
+        <div id="forgotError" style="color:#F87171;font-size:0.82rem;margin-bottom:12px;display:none;"></div>
+        <button class="auth-btn" onclick="forgotLookup()">Find My Account</button>
+      </div>
+      <div id="forgotStep2" style="display:none;">
+        <div style="font-size:0.85rem;color:var(--text-muted);margin-bottom:14px;" id="forgotQuestionLabel"></div>
+        <div class="auth-field">
+          <label>Your Answer</label>
+          <input type="text" id="forgotAnswer" placeholder="your answer" autocomplete="off">
+        </div>
+        <div class="auth-field">
+          <label>New PIN</label>
+          <input type="password" id="forgotNewPin" placeholder="4-digit PIN" maxlength="4" inputmode="numeric">
+        </div>
+        <div class="auth-field">
+          <label>Confirm New PIN</label>
+          <input type="password" id="forgotNewPinConfirm" placeholder="repeat PIN" maxlength="4" inputmode="numeric">
+        </div>
+        <div id="forgotError2" style="color:#F87171;font-size:0.82rem;margin-bottom:12px;display:none;"></div>
+        <button class="auth-btn" onclick="forgotReset()">Reset PIN</button>
+      </div>
     </div>
 
     <p style="text-align:center;font-size:0.75rem;color:var(--text-faint);margin-top:20px;">Your PIN is hashed before being stored. We never see it.</p>
@@ -802,7 +847,7 @@ async function sbFetch(method, path, body) {
     body: body ? JSON.stringify(body) : undefined
   });
   if (!res.ok) { const t = await res.text(); throw new Error(t); }
-  if (res.status === 204 || res.status === 201 || method === 'DELETE' || method === 'PATCH') return null;
+  if (res.status === 204 || res.status === 201 || method === 'DELETE') return null;
   const text = await res.text();
   if (!text || text.trim() === '') return null;
   return JSON.parse(text);
@@ -849,10 +894,49 @@ async function deleteBulkMonthFromSupabase(year, month) {
 function setAuthTab(tab) {
   document.getElementById('authLogin').style.display = tab === 'login' ? '' : 'none';
   document.getElementById('authSignup').style.display = tab === 'signup' ? '' : 'none';
+  document.getElementById('authForgot').style.display = tab === 'forgot' ? '' : 'none';
   document.getElementById('authTabLogin').classList.toggle('active', tab === 'login');
   document.getElementById('authTabSignup').classList.toggle('active', tab === 'signup');
-  document.getElementById('loginError').style.display = 'none';
-  document.getElementById('signupError').style.display = 'none';
+  document.getElementById('authTabForgot').classList.toggle('active', tab === 'forgot');
+  if (tab === 'forgot') {
+    document.getElementById('forgotStep1').style.display = '';
+    document.getElementById('forgotStep2').style.display = 'none';
+  }
+  ['loginError','signupError'].forEach(id => { const el = document.getElementById(id); if(el) el.style.display = 'none'; });
+}
+
+async function forgotLookup() {
+  const username = document.getElementById('forgotUsername').value.trim().toLowerCase();
+  if (!username) return showAuthError('forgotError', 'Please enter your username.');
+  try {
+    const rows = await sbFetch('GET', `users?username=eq.${encodeURIComponent(username)}&select=username,security_question`);
+    if (!rows.length) return showAuthError('forgotError', 'Username not found.');
+    if (!rows[0].security_question) return showAuthError('forgotError', 'No security question set for this account.');
+    document.getElementById('forgotQuestionLabel').textContent = `🔐 ${rows[0].security_question}`;
+    document.getElementById('forgotStep1').style.display = 'none';
+    document.getElementById('forgotStep2').style.display = '';
+    document.getElementById('forgotAnswer').dataset.username = username;
+  } catch(e) { showAuthError('forgotError', `Error: ${e.message}`); }
+}
+
+async function forgotReset() {
+  const username = document.getElementById('forgotAnswer').dataset.username;
+  const answer = document.getElementById('forgotAnswer').value.trim().toLowerCase();
+  const newPin = document.getElementById('forgotNewPin').value.trim();
+  const newPinConfirm = document.getElementById('forgotNewPinConfirm').value.trim();
+  if (!answer) return showAuthError('forgotError2', 'Please enter your answer.');
+  if (newPin.length !== 4 || !/^\d+$/.test(newPin)) return showAuthError('forgotError2', 'PIN must be exactly 4 digits.');
+  if (newPin !== newPinConfirm) return showAuthError('forgotError2', 'PINs do not match.');
+  try {
+    const rows = await sbFetch('GET', `users?username=eq.${encodeURIComponent(username)}&select=security_answer`);
+    const hashedAnswer = await hashPin(answer);
+    if (rows[0].security_answer !== hashedAnswer) return showAuthError('forgotError2', 'Incorrect answer. Try again.');
+    const hashedPin = await hashPin(newPin);
+    await sbFetch('PATCH', `users?username=eq.${encodeURIComponent(username)}`, { pin: hashedPin });
+    showToast('PIN reset successfully! Please log in. 🔐');
+    setAuthTab('login');
+    document.getElementById('loginUsername').value = username;
+  } catch(e) { showAuthError('forgotError2', `Error: ${e.message}`); }
 }
 
 function showAuthError(id, msg) {
@@ -885,7 +969,12 @@ async function signup() {
     const existing = await sbFetch('GET', `users?username=eq.${encodeURIComponent(username)}&select=username`);
     if (existing.length) return showAuthError('signupError', 'That username is already taken!');
     const hashed = await hashPin(pin);
-    await sbFetch('POST', 'users', { username, pin: hashed });
+    const question = document.getElementById('signupQuestion').value;
+    const answer = document.getElementById('signupAnswer').value.trim().toLowerCase();
+    if (!question) return showAuthError('signupError', 'Please select a security question.');
+    if (!answer) return showAuthError('signupError', 'Please enter a security answer.');
+    const hashedAnswer = await hashPin(answer);
+    await sbFetch('POST', 'users', { username, pin: hashed, security_question: question, security_answer: hashedAnswer });
     await startSession(username);
     const local = JSON.parse(localStorage.getItem('poop_logs') || '[]');
     if (local.length) {
