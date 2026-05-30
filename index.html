@@ -929,7 +929,7 @@ async function forgotReset() {
   if (newPin !== newPinConfirm) return showAuthError('forgotError2', 'PINs do not match.');
   try {
     const rows = await sbFetch('GET', `users?username=eq.${encodeURIComponent(username)}&select=security_answer`);
-    const hashedAnswer = await hashPin(answer);
+    const hashedAnswer = await hashPin(answer.toLowerCase().trim());
     if (rows[0].security_answer !== hashedAnswer) return showAuthError('forgotError2', 'Incorrect answer. Try again.');
     const hashedPin = await hashPin(newPin);
     await sbFetch('PATCH', `users?username=eq.${encodeURIComponent(username)}`, { pin: hashedPin });
@@ -945,7 +945,7 @@ function showAuthError(id, msg) {
 }
 
 async function login() {
-  const username = document.getElementById('loginUsername').value.trim();
+  const username = document.getElementById('loginUsername').value.trim().toLowerCase();
   const pin = document.getElementById('loginPin').value.trim();
   if (!username || !pin) return showAuthError('loginError', 'Please enter username and PIN.');
   try {
