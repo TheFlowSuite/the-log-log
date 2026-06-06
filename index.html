@@ -1473,11 +1473,11 @@ function renderPersonalBests(data) {
   ];
 
   container.innerHTML = bests.map(b => `
-    <div style="background:var(--surface2);border-radius:var(--radius);padding:16px;display:flex;flex-direction:column;align-items:center;text-align:center;gap:4px;">
-      <div style="font-size:1.4rem;">${b.icon}</div>
-      <div style="font-size:0.7rem;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-faint);margin-top:4px;">${b.label}</div>
-      <div style="font-family:'Barlow Condensed',sans-serif;font-size:1.6rem;font-weight:700;color:var(--text);line-height:1;">${b.value}</div>
-      <div style="font-size:0.72rem;color:var(--text-muted);">${b.sub}</div>
+    <div style="background:#1E1E2A;border-radius:14px;padding:16px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:4px;">
+      <div style="font-size:1.4rem;line-height:1;">${b.icon}</div>
+      <div style="font-size:0.7rem;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;color:#4A3880;margin-top:6px;">${b.label}</div>
+      <div style="font-family:'Barlow Condensed',sans-serif;font-size:1.6rem;font-weight:700;color:#EEEAF8;line-height:1;margin-top:2px;">${b.value}</div>
+      <div style="font-size:0.72rem;color:#A78BFA;margin-top:2px;">${b.sub}</div>
     </div>
   `).join('');
 }
