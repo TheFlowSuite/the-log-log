@@ -1418,13 +1418,13 @@ function renderPersonalBests(data) {
   const bestDayLabel = `${MONTHS[parseInt(bdm)]} ${bdd}, ${bdy}`;
   const bestDayCount = dayCounts[bestDayKey];
 
-  // Longest streak ever
+  // Longest streak ever + date range
   const loggedDays = new Set(nonBulk.map(d => {
     const date = new Date(d.ts);
     return `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
   }));
   const allDays = [...loggedDays].sort();
-  let bestStreak = 0, tempStreak = 0;
+  let bestStreak = 0, tempStreak = 0, bestStreakEnd = 0;
   allDays.forEach((key, i) => {
     if (i === 0) { tempStreak = 1; }
     else {
@@ -1433,8 +1433,12 @@ function renderPersonalBests(data) {
       const diff = (curr - prev) / 86400000;
       tempStreak = diff === 1 ? tempStreak + 1 : 1;
     }
-    if (tempStreak > bestStreak) bestStreak = tempStreak;
+    if (tempStreak > bestStreak) { bestStreak = tempStreak; bestStreakEnd = i; }
   });
+  const streakEndDate = new Date(allDays[bestStreakEnd]);
+  const streakStartDate = new Date(allDays[bestStreakEnd - bestStreak + 1]);
+  const fmtDate = d => `${d.getMonth()+1}/${d.getDate()}`;
+  const streakRange = bestStreak > 1 ? `${fmtDate(streakStartDate)} – ${fmtDate(streakEndDate)}` : fmtDate(streakEndDate);
 
   // Most active day of week
   const dowCounts = [0,0,0,0,0,0,0];
@@ -1461,7 +1465,7 @@ function renderPersonalBests(data) {
 
   const bests = [
     { icon:'🥇', label:'Best Month', value: bestMonthCount, sub: bestMonthLabel },
-    { icon:'🔥', label:'Longest Streak', value: `${bestStreak}d`, sub: bestStreak === 1 ? '1 day' : `${bestStreak} days` },
+    { icon:'🔥', label:'Longest Streak', value: `${bestStreak}d`, sub: streakRange },
     { icon:'⚡', label:'Most In One Day', value: bestDayCount, sub: bestDayLabel },
     { icon:'📅', label:'Most Active Day', value: DAYS[bestDow], sub: `${dowCounts[bestDow]} total poops` },
     { icon:'🐦', label:'Earliest Log', value: earliestLabel, sub: 'earliest ever' },
