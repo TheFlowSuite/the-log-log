@@ -1425,9 +1425,10 @@ function renderPersonalBests(data) {
   const bestDayCount = dayCounts[bestDayKey];
 
   // Longest streak ever + date range
+  const pad = n => String(n).padStart(2, '0');
   const loggedDays = new Set(nonBulk.map(d => {
     const date = new Date(d.ts);
-    return `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
+    return `${date.getFullYear()}-${pad(date.getMonth()+1)}-${pad(date.getDate())}`;
   }));
   const allDays = [...loggedDays].sort();
   let bestStreak = 0, tempStreak = 0, bestStreakEnd = 0;
